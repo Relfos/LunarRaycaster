@@ -19,79 +19,13 @@ namespace LunarLabs.Raycaster
         public bool hasLight;
     }
 
-    public class Camera
-    {
-        private readonly Raycaster raycaster;
-
-        public float posX { get; private set; } = 22.0f;
-        public float posY { get; private set; } = 11.5f; //x and y start position
-
-        public float dirX { get; private set; } = -1.0f;
-        public float dirY { get; private set; } = 0.0f; //initial direction vector
-
-        public float planeX { get; private set; } = 0.0f;
-        public float planeY { get; private set; } = 0.66f; //the 2d raycaster version of camera plane
-
-        public Camera(Raycaster raycaster)
-        {
-            this.raycaster = raycaster;
-        }
-
-        public void Move(float moveSpeed)
-        {
-            posX += dirX * moveSpeed;
-            posY += dirY * moveSpeed;
-        }
-
-        public void Strafe(float moveSpeed)
-        {
-            posX += dirY * moveSpeed;
-            posY -= dirX * moveSpeed;
-        }
-
-        public int drawOffset { get; private set; }
-        internal int minY;
-        internal int maxY;
-
-        private float lookOffset = 0;
-
-
-        public void Look(float speed)
-        {
-            speed *= 128;
-            lookOffset += speed;
-
-            Update();
-        }
-
-        internal void Update()
-        {
-            int limit = 64;
-            if (lookOffset < -limit) lookOffset = -limit;
-            if (lookOffset > limit) lookOffset = limit;
-
-            drawOffset = MathUtils.FloorToInt(lookOffset);
-            minY = -drawOffset;
-            maxY = (raycaster.Output.Height - 1) - drawOffset;
-        }
-
-        public void Rotate(float rotSpeed)
-        {
-            float oldDirX = dirX;
-            dirX = dirX * MathUtils.Cos(rotSpeed) - dirY * MathUtils.Sin(rotSpeed);
-            dirY = oldDirX * MathUtils.Sin(rotSpeed) + dirY * MathUtils.Cos(rotSpeed);
-            float oldPlaneX = planeX;
-            planeX = planeX * MathUtils.Cos(rotSpeed) - planeY * MathUtils.Sin(rotSpeed);
-            planeY = oldPlaneX * MathUtils.Sin(rotSpeed) + planeY * MathUtils.Cos(rotSpeed);
-        }
-    }
-
     public abstract class Raycaster
     {
+        public static readonly int tileSize = 1 << tileShift;
+        public const int tileShift = 5;
+
         public readonly Texture Output;
         public readonly Camera Camera;
-
-        public int tileSize = 64;
 
         private bool initialized = false;
 
@@ -110,6 +44,24 @@ namespace LunarLabs.Raycaster
 
         internal Texture[] textures;
         private Texture[] skybox = new Texture[6];
+
+        public struct MapHit
+        {
+            public int mapX;
+            public int mapY;
+            public Texture wallTex;
+            public HitAxis side;
+
+            public MapHit(int mapX, int mapY, HitAxis side, Texture wall)
+            {
+                this.mapX = mapX;
+                this.mapY = mapY;
+                this.side = side;
+                this.wallTex = wall;
+            }
+        }
+
+        private MapHit[] hits = new MapHit[8];
 
         public Raycaster(int resolutionX, int resolutionY)
         {
@@ -205,6 +157,8 @@ namespace LunarLabs.Raycaster
             int screenWidth = Output.Width;
             int screenHeight = Output.Height;
 
+            Array.Clear(Output.Pixels, 0, Output.Pixels.Length);
+
             #region ENVIROMENT CASTING
             for (int x = 0; x < screenWidth; x++)
             {
@@ -215,10 +169,6 @@ namespace LunarLabs.Raycaster
                 float rayDirX = Camera.dirX + Camera.planeX * cameraX;
                 float rayDirY = Camera.dirY + Camera.planeY * cameraX;
 
-                //which box of the map we're in
-                int mapX = (int)(rayPosX);
-                int mapY = (int)(rayPosY);
-
                 //length of ray from current position to next x or y-side
                 float sideDistX;
                 float sideDistY;
@@ -226,37 +176,39 @@ namespace LunarLabs.Raycaster
                 //length of ray from one x or y-side to next x or y-side
                 float deltaDistX = MathUtils.Sqrt(1 + (rayDirY * rayDirY) / (rayDirX * rayDirX));
                 float deltaDistY = MathUtils.Sqrt(1 + (rayDirX * rayDirX) / (rayDirY * rayDirY));
-                float perpWallDist;
 
                 //what direction to step in x or y-direction (either +1 or -1)
                 int stepX;
                 int stepY;
 
-                HitAxis side = HitAxis.X; //was a NS or a EW wall hit?
+                //which box of the map we're in
+                int currentMapX = (int)(rayPosX);
+                int currentMapY = (int)(rayPosY);
 
                 //calculate step and initial sideDist
                 if (rayDirX < 0)
                 {
                     stepX = -1;
-                    sideDistX = (rayPosX - mapX) * deltaDistX;
+                    sideDistX = (rayPosX - currentMapX) * deltaDistX;
                 }
                 else
                 {
                     stepX = 1;
-                    sideDistX = (mapX + 1.0f - rayPosX) * deltaDistX;
+                    sideDistX = (currentMapX + 1.0f - rayPosX) * deltaDistX;
                 }
                 if (rayDirY < 0)
                 {
                     stepY = -1;
-                    sideDistY = (rayPosY - mapY) * deltaDistY;
+                    sideDistY = (rayPosY - currentMapY) * deltaDistY;
                 }
                 else
                 {
                     stepY = 1;
-                    sideDistY = (mapY + 1.0f - rayPosY) * deltaDistY;
+                    sideDistY = (currentMapY + 1.0f - rayPosY) * deltaDistY;
                 }
 
-                Texture wallTex = null;
+                int hitCount = 0;
+                HitAxis currentSide; //was a NS or a EW wall hit?
 
                 //perform DDA
                 while (true)
@@ -265,118 +217,165 @@ namespace LunarLabs.Raycaster
                     if (sideDistX < sideDistY)
                     {
                         sideDistX += deltaDistX;
-                        mapX += stepX;
-                        side = HitAxis.X;
+                        currentMapX += stepX;
+                        currentSide = HitAxis.X;
                     }
                     else
                     {
                         sideDistY += deltaDistY;
-                        mapY += stepY;
-                        side = HitAxis.Y;
+                        currentMapY += stepY;
+                        currentSide = HitAxis.Y;
                     }
 
                     //Check if ray has hit a wall
                     MapTile tile;
-                    var hit = GetTileAt(mapX, mapY, out tile);
-                    wallTex = textures[tile.wallID];
+                    var sucess = GetTileAt(currentMapX, currentMapY, out tile);
+                    var wallTex = textures[tile.wallID];
 
-                    if (!hit || tile.wallID > 0)
+                    if (!sucess)
+                    {
+                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex);
+                        hits[hitCount] = hit;
+                        hitCount++;
+                        break;
+                    }
+
+                    if (tile.wallID > 0)
+                    {
+                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex);
+                        hits[hitCount] = hit;
+                        hitCount++;
+
+                        if (!wallTex.hasAlpha)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (hitCount >= hits.Length)
                     {
                         break;
                     }
                 }
 
-                //Calculate distance of perpendicular ray (oblique distance will give fisheye effect!)
-                if (side == 0)
-                    perpWallDist = (mapX - rayPosX + (1 - stepX) / 2) / rayDirX;
-                else
-                    perpWallDist = (mapY - rayPosY + (1 - stepY) / 2) / rayDirY;
+                float perpWallDist = 999;
 
-                //Calculate height of line to draw on screen
-                int lineHeight = MathUtils.FloorToInt(screenHeight / perpWallDist);
+                int drawStart = Camera.maxY;
+                int drawEnd = Camera.minY;
 
-                //calculate lowest and highest pixel to fill in current stripe
-                int drawStart = (-lineHeight + screenHeight) / 2;
-                if (drawStart < Camera.minY) drawStart = Camera.minY;
-
-                int drawEnd = (lineHeight + screenHeight) / 2;
-                if (drawEnd > Camera.maxY) drawEnd = Camera.maxY;
-
-                int tempEnd = drawEnd;
-                //drawStart += (int) (180  / perpWallDist);
-                //drawEnd -= (int)(60 / perpWallDist);
-
-                //calculate value of wallX
-                float wallX, wallY; //where exactly the wall was hit
-
-                wallX = rayPosY + perpWallDist * rayDirY;
-                wallY = rayPosX + perpWallDist * rayDirX;
-
-                float dist = perpWallDist;
-
-                wallX = (side == HitAxis.Y) ? wallY : wallX;
-
-                wallX -= MathUtils.Floor(wallX);
-
-                //x coordinate on the texture
-                int texX;
-
-                texX = MathUtils.FloorToInt(wallX * tileSize);
-
-                if (side == HitAxis.X && rayDirX > 0) texX = tileSize - texX - 1;
-                if (side == HitAxis.Y && rayDirY < 0) texX = tileSize - texX - 1;
-
-                for (int y = drawStart; y < drawEnd; y++)
+                //where exactly the wall was hit
+                float wallX = 0;
+                float wallY = 0;
+                
+                if (hitCount > 1)
                 {
-                    float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
-                    int texY = MathUtils.FloorToInt(Math.Abs(((d * tileSize) / lineHeight)));
+                    hitCount+=0;
+                }
 
-                    byte red, green, blue, alpha;
-                    float scale;
+                for (int k= 0; k< hitCount; k++)
+                {
+                    var hit = hits[k];
 
-                    if (wallTex != null)
+                    //Calculate distance of perpendicular ray (oblique distance will give fisheye effect!)
+                    if (hit.side == 0)
+                        perpWallDist = (hit.mapX - rayPosX + (1 - stepX) / 2) / rayDirX;
+                    else
+                        perpWallDist = (hit.mapY - rayPosY + (1 - stepY) / 2) / rayDirY;
+
+                    //Calculate height of line to draw on screen
+                    int lineHeight = MathUtils.FloorToInt(screenHeight / perpWallDist);
+
+                    //calculate lowest and highest pixel to fill in current stripe
+                    drawStart = (-lineHeight + screenHeight) / 2;
+                    if (drawStart < Camera.minY) drawStart = Camera.minY;
+
+                    drawEnd = (lineHeight + screenHeight) / 2;
+                    if (drawEnd > Camera.maxY) drawEnd = Camera.maxY;
+
+                    int tempEnd = drawEnd;
+                    //drawStart += (int) (180  / perpWallDist);
+                    //drawEnd -= (int)(60 / perpWallDist);
+
+                    //calculate value of wallX
+                    wallX = rayPosY + perpWallDist * rayDirY;
+                    wallY = rayPosX + perpWallDist * rayDirX;
+
+                    float dist = perpWallDist;
+
+                    wallX = (hit.side == HitAxis.Y) ? wallY : wallX;
+
+                    wallX -= MathUtils.Floor(wallX);
+
+                    //x coordinate on the texture
+                    int texX;
+
+                    texX = MathUtils.FloorToInt(wallX * tileSize);
+
+                    if (hit.side == HitAxis.X && rayDirX > 0) texX = tileSize - texX - 1;
+                    if (hit.side == HitAxis.Y && rayDirY < 0) texX = tileSize - texX - 1;
+
+                    for (int y = drawStart; y < drawEnd; y++)
                     {
-                        wallTex.GetPixel(texX, texY, out red, out green, out blue, out alpha);
-                        scale = CalculateFog(dist, mapX, mapY, texX, texY, false);
-
-                        if (side == HitAxis.Y)
+                        if (Output.GetChannel(x, y, 3) != 0)
                         {
-                            scale *= 0.5f;
+                            continue;
+                        }
+
+                        float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
+                        int texY = MathUtils.FloorToInt(Math.Abs(((d * tileSize) / lineHeight)));
+
+                        byte red, green, blue, alpha;
+                        float scale;
+
+                        if (hit.wallTex != null)
+                        {
+                            hit.wallTex.GetPixel(texX, texY, out red, out green, out blue, out alpha);
+                            scale = CalculateFog(dist, hit.mapX, hit.mapY, texX, texY, false);
+
+                            if (hit.side == HitAxis.Y)
+                            {
+                                //make color darker for y-sides
+                                scale *= 0.5f;
+                            }
+                        }
+                        else
+                        {
+                            SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
+                            scale = 1.0f;
+                        }
+
+                        if (alpha > 0)
+                        {
+                            WritePixel(x, y, texX, texY, red, green, blue, scale);
                         }
                     }
-                    else
+                    drawEnd = tempEnd;
+
+                    if (k == 0)
                     {
-                        SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
-                        scale = 1.0f;
+                        //SET THE ZBUFFER FOR THE SPRITE CASTING
+                        ZBuffer[x] = perpWallDist; //perpendicular distance is used
                     }
-
-                    //make color darker for y-sides: R, G and B byte each divided through two with a "shift" and an "and"
-
-                    
-                    WritePixel(x, y, texX, texY, red, green, blue, scale);
                 }
-                drawEnd = tempEnd;
-
-                //SET THE ZBUFFER FOR THE SPRITE CASTING
-                ZBuffer[x] = perpWallDist; //perpendicular distance is used
 
                 //FLOOR CASTING
                 float floorXWall, floorYWall; //x, y position of the floor texel at the bottom of the wall
 
                 //4 different wall directions possible
-                switch (side)
+                var bestHit = hits[hitCount-1];
+                switch (bestHit.side)
                 {
                     case HitAxis.X:
                         {
                             if (rayDirX > 0)
                             {
-                                floorXWall = mapX;
+                                floorXWall = bestHit.mapX;
                             }
                             else
                             {
-                                floorXWall = mapX + 1.0f;
+                                floorXWall = bestHit.mapX + 1.0f;
                             }
-                            floorYWall = mapY + wallX;
+                            floorYWall = bestHit.mapY + wallX;
                             break;
                         }
 
@@ -384,13 +383,13 @@ namespace LunarLabs.Raycaster
                         {
                             if (rayDirY > 0)
                             {
-                                floorXWall = mapX + wallX;
-                                floorYWall = mapY;
+                                floorXWall = bestHit.mapX + wallX;
+                                floorYWall = bestHit.mapY;
                             }
                             else
                             {
-                                floorXWall = mapX + wallX;
-                                floorYWall = mapY + 1.0f;
+                                floorXWall = bestHit.mapX + wallX;
+                                floorYWall = bestHit.mapY + 1.0f;
                             }
                             break;
                         }
@@ -402,14 +401,14 @@ namespace LunarLabs.Raycaster
                 distWall = perpWallDist;
                 distPlayer = 0.0f;
 
-                if (wallTex != null)
-                {
-                    //drawEnd++;
-                }
-
                 //draw the floor from drawEnd to the bottom of the screen
                 for (int y = drawEnd; y < Camera.maxY; y++)
                 {
+                    if (Output.GetChannel(x, y, 3) != 0)
+                    {
+                        continue;
+                    }
+
                     var temp = (2.0f * y) - screenHeight;
                     currentDist = screenHeight / temp; //you could make a small lookup table for this instead
 
@@ -418,17 +417,16 @@ namespace LunarLabs.Raycaster
                     float currentFloorX = MathUtils.Lerp(Camera.posX, floorXWall, weight);
                     float currentFloorY = MathUtils.Lerp(Camera.posY, floorYWall, weight);
 
-                    mapX = MathUtils.FloorToInt(currentFloorX);
-                    mapY = MathUtils.FloorToInt(currentFloorY);
+                    var mapX = MathUtils.FloorToInt(currentFloorX);
+                    var mapY = MathUtils.FloorToInt(currentFloorY);
 
                     MapTile tile;
                     GetTileAt(mapX, mapY, out tile);
 
-                    dist = (currentDist - distPlayer);
+                    var dist = (currentDist - distPlayer);
 
                     byte red, green, blue, alpha;
                     float scale;
-
                     int floorTexX, floorTexY;
 
                     if (tile.floorID > 0)
@@ -454,6 +452,11 @@ namespace LunarLabs.Raycaster
                 //ceiling
                 for (int y = Camera.minY; y < drawStart; y++)
                 {
+                    if (Output.GetChannel(x, y, 3) != 0)
+                    {
+                        continue;
+                    }
+
                     var temp = (2.0f * (screenHeight- y)) - screenHeight;
                     currentDist = screenHeight / temp; //you could make a small lookup table for this instead
 
@@ -462,8 +465,8 @@ namespace LunarLabs.Raycaster
                     float currentFloorX = MathUtils.Lerp(Camera.posX, floorXWall, weight);
                     float currentFloorY = MathUtils.Lerp(Camera.posY, floorYWall, weight);
 
-                    mapX = MathUtils.FloorToInt(currentFloorX);
-                    mapY = MathUtils.FloorToInt(currentFloorY);
+                    var mapX = MathUtils.FloorToInt(currentFloorX);
+                    var mapY = MathUtils.FloorToInt(currentFloorY);
 
                     MapTile tile;
                     GetTileAt(mapX, mapY, out tile);
@@ -471,7 +474,7 @@ namespace LunarLabs.Raycaster
                     int ceilTexX, ceilTexY;
                     float scale;
 
-                    dist = (currentDist - distPlayer);
+                    var dist = (currentDist - distPlayer);
                     byte red, green, blue, alpha;
 
                     if (tile.ceilID > 0)

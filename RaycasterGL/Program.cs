@@ -31,7 +31,7 @@ namespace LunarLabs.Framework
               {4,0,8,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,0,0,0,8},
               {4,0,0,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,7,7,7,1},
               {4,0,0,0,0,0,0,5,5,5,5,0,5,5,5,5,7,7,7,7,7,7,7,1},
-              {6,6,6,6,6,6,6,6,6,6,6,0,6,6,6,6,6,6,6,6,6,6,6,6},
+              {6,6,6,6,6,6,6,6,6,6,6,9,6,6,6,6,6,6,6,6,6,6,6,6},
               {8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4},
               {6,6,6,6,6,6,0,6,6,6,6,0,6,6,6,6,6,6,6,6,6,6,6,6},
               {4,4,4,4,4,4,0,4,4,4,6,0,6,2,2,2,2,2,2,2,3,3,3,3},
@@ -50,9 +50,9 @@ namespace LunarLabs.Framework
             tileset = new Bitmap(Image.FromFile("Assets/tileset.png"));
             skybox = new Bitmap(Image.FromFile("Assets/skybox.png"));
 
-            AddSprite(new Sprite(20, 11.5f, 9));
-            AddSprite(new Sprite(22, 11.5f, 10));
-            AddSprite(new Sprite(18, 11.5f, 11));
+            AddSprite(new Sprite(20, 11.5f, 10));
+            AddSprite(new Sprite(22, 11.5f, 11));
+            AddSprite(new Sprite(18, 11.5f, 12));
         }
 
         protected override bool GetTileAt(int x, int y, out MapTile tile)
@@ -79,7 +79,7 @@ namespace LunarLabs.Framework
             {
                 tile.wallID = wallData[x, y];
                 tile.floorID = 4;
-                tile.ceilID = 0;// 7;
+                tile.ceilID = (byte)(y ==11?7: 0);
                 return true;
             }
         }
@@ -87,7 +87,7 @@ namespace LunarLabs.Framework
         protected override Texture LoadSkybox(int side)
         {
             int scale = 2;
-            int size = tileSize * scale;
+            int size = 64 * scale;
 
             switch (side)
             {
@@ -103,8 +103,8 @@ namespace LunarLabs.Framework
 
         protected override Texture LoadTile(int index)
         {
-            int maxTile = (tileset.Width / 64) + 1;
-            if (index == 0 || index >= maxTile)
+            int maxTile = (tileset.Width / tileSize);
+            if (index == 0 || index > maxTile)
             {
                 return null;
             }
