@@ -3,13 +3,12 @@
 #endif
 
 #if UNITY
-using System;
 using UnityEngine;
-#else
-using System;
 #endif
 
-namespace LunarLabs.Retro
+using System;
+
+namespace LunarLabs.Raycaster
 {
 
 #if !UNITY

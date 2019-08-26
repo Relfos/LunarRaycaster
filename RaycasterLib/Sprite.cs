@@ -1,6 +1,4 @@
-﻿using LunarLabs.Retro;
-
-namespace LunarLabs.Retro
+﻿namespace LunarLabs.Raycaster
 {
     public class Sprite
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 
-namespace LunarLabs.Retro
+namespace LunarLabs.Raycaster
 {
     public class Texture
     {

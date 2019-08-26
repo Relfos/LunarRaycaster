@@ -5,11 +5,11 @@ using System.Diagnostics;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Graphics;
 using OpenTK.Input;
-using LunarLabs.Retro;
+using LunarLabs.Raycaster;
 
 namespace LunarLabs.Framework
 {
-    public class CustomRaycaster : Raycaster
+    public class CustomRaycaster : Raycaster.Raycaster
     {
         private Bitmap tileset;
         private Bitmap skybox;
@@ -115,7 +115,7 @@ namespace LunarLabs.Framework
 
     class Program
     {
-        static Retro.Raycaster engine;
+        static Raycaster.Raycaster engine;
 
         static void UpdateBuffer(int texID)
         {

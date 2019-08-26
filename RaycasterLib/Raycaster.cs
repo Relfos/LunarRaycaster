@@ -1,8 +1,7 @@
-﻿using LunarLabs.Retro;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace LunarLabs.Retro
+namespace LunarLabs.Raycaster
 {
     public enum HitAxis
     {
