@@ -521,7 +521,7 @@ namespace LunarLabs.Raycaster
             {
                 var sprite = sprites[i];
                 spriteQueue[i].sprite = sprite;
-                spriteQueue[i].distance = ((Camera.posX - sprite.x) * (Camera.posX - sprite.x) + (Camera.posY - sprite.y) * (Camera.posY - sprite.y)); //sqrt not taken, unneeded
+                spriteQueue[i].distance = ((Camera.posX - sprite.posX) * (Camera.posX - sprite.posX) + (Camera.posY - sprite.posY) * (Camera.posY - sprite.posY)); //sqrt not taken, unneeded
             }
             CombSort();
 

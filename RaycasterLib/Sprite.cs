@@ -2,18 +2,18 @@
 {
     public class Sprite
     {
-        public float x;
-        public float y;
-        public int texture;
-        public int offset; // negative numbers make the sprites float up, positive make them go under floor
+        public float posX;
+        public float posY;
+        public int textureID;
+        public int vOffset; // negative numbers make the sprites float up, positive make them go under floor
         public bool isEmissive = false;
 
-        public Sprite(float x, float y, int texture, int offset = 0)
+        public Sprite(float x, float y, int textureID, int offset = 0)
         {
-            this.x = x;
-            this.y = y;
-            this.texture = texture;
-            this.offset = offset;
+            this.posX = x;
+            this.posY = y;
+            this.textureID = textureID;
+            this.vOffset = offset;
         }
 
         public void Render(Raycaster raycaster, float invDet)
@@ -25,21 +25,20 @@
 
             var cam = raycaster.Camera;
 
-            float spriteX = this.x - cam.posX;
-            float spriteY = this.y - cam.posY;
+            float spriteX = this.posX - cam.posX;
+            float spriteY = this.posY - cam.posY;
 
             //transform sprite with the inverse camera matrix
             // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
             // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
             // [ planeY   dirY ]                                          [ -planeY  planeX ]
 
-
             float transformX = invDet * (cam.dirY * spriteX - cam.dirX * spriteY);
             float transformY = invDet * (-cam.planeY * spriteX + cam.planeX * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
 
             float spriteScreenX = (screenWidth / 2) * (1 + transformX / transformY);
 
-            float vMoveScreen = this.offset / transformY;
+            float vMoveScreen = this.vOffset / transformY;
 
             //calculate height of the sprite on screen
             float spriteHeight  = screenHeight / transformY;//using "transformY" instead of the real distance prevents fisheye
@@ -47,8 +46,8 @@
             //calculate width of the sprite
             float spriteWidth  = screenHeight / transformY;
 
-            int mapX = MathUtils.FloorToInt(x);
-            int mapY = MathUtils.FloorToInt(y);
+            int mapX = MathUtils.FloorToInt(posX);
+            int mapY = MathUtils.FloorToInt(posY);
 
             int drawStartX = MathUtils.FloorToInt(-spriteWidth / 2 + spriteScreenX);
             int drawEndX = MathUtils.FloorToInt(spriteWidth / 2 + spriteScreenX);
@@ -67,7 +66,7 @@
             //loop through every vertical stripe of the sprite on screen
             for (int stripe = drawStartX; stripe < drawEndX; stripe++)
             {
-                var texture = raycaster.textures[this.texture];
+                var texture = raycaster.textures[this.textureID];
 
                 int texX = MathUtils.FloorToInt((stripe - (-spriteWidth / 2 + spriteScreenX)) * texture.Width / spriteWidth);
                 //the conditions in the if are:
@@ -86,7 +85,7 @@
 
                         byte red, green, blue, alpha;
 
-                        raycaster.textures[this.texture].GetPixel(texX, texY, out red, out green, out blue, out alpha); //get current color from the texture
+                        raycaster.textures[this.textureID].GetPixel(texX, texY, out red, out green, out blue, out alpha); //get current color from the texture
 
                         if (alpha == 0)
                         {
