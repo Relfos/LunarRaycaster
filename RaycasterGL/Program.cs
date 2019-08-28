@@ -53,6 +53,7 @@ namespace LunarLabs.Framework
             AddSprite(new Sprite(20, 11.5f, 10));
             AddSprite(new Sprite(22, 11.5f, 11));
             AddSprite(new Sprite(18, 11.5f, 12));
+            AddSprite(new Sprite(10, 11.5f, 11));
         }
 
         protected override bool GetTileAt(int x, int y, out MapTile tile)
@@ -281,7 +282,10 @@ namespace LunarLabs.Framework
 
                     newMouseDeltaX = 0;
                     newMouseDeltaY = 0;
-                    OpenTK.Input.Mouse.SetPosition(game.X + game.Width / 2, game.Y + game.Height / 2);
+                    if (game.Focused)
+                    { 
+                        OpenTK.Input.Mouse.SetPosition(game.X + game.Width / 2, game.Y + game.Height / 2);
+                    }
                 };
 
                 game.Closed += (sender, e) =>
