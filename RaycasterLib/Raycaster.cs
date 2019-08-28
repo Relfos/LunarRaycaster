@@ -15,14 +15,16 @@ namespace LunarLabs.Raycaster
         public byte wallID;
         public byte ceilID;
         public byte floorID;
+        public int cutOff;
         public float lightLevel;
         public bool hasLight;
     }
 
     public abstract class Raycaster
     {
-        public static readonly int tileSize = 1 << tileShift;
-        public const int tileShift = 5;
+        public const int TileShift = 5;
+        public const int TileSize = 1 << TileShift;
+        public const int HalfTileSize = TileSize >> 1;
 
         public readonly Texture Output;
         public readonly Camera Camera;
@@ -51,13 +53,15 @@ namespace LunarLabs.Raycaster
             public int mapX;
             public int mapY;
             public Texture wallTex;
+            public int cutOff;
             public HitAxis side;
 
-            public MapHit(int mapX, int mapY, HitAxis side, Texture wall)
+            public MapHit(int mapX, int mapY, HitAxis side, Texture wall, int cutOff)
             {
                 this.mapX = mapX;
                 this.mapY = mapY;
                 this.side = side;
+                this.cutOff = cutOff;
                 this.wallTex = wall;
             }
         }
@@ -241,7 +245,7 @@ namespace LunarLabs.Raycaster
 
                     if (!sucess)
                     {
-                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex);
+                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex, 0);
                         hits[hitCount] = hit;
                         hitCount++;
                         break;
@@ -249,11 +253,11 @@ namespace LunarLabs.Raycaster
 
                     if (tile.wallID > 0)
                     {
-                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex);
+                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex, tile.cutOff);
                         hits[hitCount] = hit;
                         hitCount++;
 
-                        if (!wallTex.hasAlpha)
+                        if (!wallTex.hasAlpha && tile.cutOff == 0)
                         {
                             break;
                         }
@@ -316,15 +320,25 @@ namespace LunarLabs.Raycaster
                     //x coordinate on the texture
                     int texX;
 
-                    texX = MathUtils.FloorToInt(wallX * tileSize);
+                    texX = MathUtils.FloorToInt(wallX * TileSize);
 
-                    if (hit.side == HitAxis.X && rayDirX > 0) texX = tileSize - texX - 1;
-                    if (hit.side == HitAxis.Y && rayDirY < 0) texX = tileSize - texX - 1;
+                    if (hit.side == HitAxis.X && rayDirX > 0) texX = TileSize - texX - 1;
+                    if (hit.side == HitAxis.Y && rayDirY < 0) texX = TileSize - texX - 1;
 
                     for (int y = drawStart; y < drawEnd; y++)
                     {
                         float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
-                        int texY = MathUtils.FloorToInt(Math.Abs(((d * tileSize) / lineHeight)));
+                        int texY = MathUtils.FloorToInt(Math.Abs(((d * TileSize) / lineHeight)));
+
+                        if (hit.cutOff > 0 && texY < hit.cutOff)
+                        {
+                            continue;
+                        }
+
+                        if (hit.cutOff < 0 && texY > -hit.cutOff)
+                        {
+                            continue;
+                        }
 
                         byte red, green, blue, alpha;
                         float scale;
@@ -351,7 +365,9 @@ namespace LunarLabs.Raycaster
                             depth = 9998;
                         }
 
-                        if (alpha > 0)
+                        bool visible = alpha > 0;
+
+                        if (visible)
                         {
                             WritePixel(x, y, texX, texY, red, green, blue, scale, depth);
                         }
@@ -422,6 +438,11 @@ namespace LunarLabs.Raycaster
                     MapTile tile;
                     GetTileAt(mapX, mapY, out tile);
 
+                    if (tile.wallID != 0 && !textures[tile.wallID].hasAlpha && tile.cutOff< HalfTileSize)
+                    {
+                        continue;
+                    }
+
                     var dist = (currentDist - distPlayer);
 
                     byte red, green, blue, alpha;
@@ -433,8 +454,8 @@ namespace LunarLabs.Raycaster
                     if (tile.floorID > 0)
                     {
                         var floorTexture = textures[tile.floorID];
-                        floorTexX = (int)(currentFloorX * tileSize) % floorTexture.Width;
-                        floorTexY = (int)(currentFloorY * tileSize) % floorTexture.Height;
+                        floorTexX = (int)(currentFloorX * TileSize) % floorTexture.Width;
+                        floorTexY = (int)(currentFloorY * TileSize) % floorTexture.Height;
 
                         scale = CalculateFog(dist, mapX, mapY, floorTexX, floorTexY, false);
                         floorTexture.GetPixel(floorTexX, floorTexY, out red, out green, out blue, out alpha);
@@ -450,7 +471,8 @@ namespace LunarLabs.Raycaster
                         SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
                     }
 
-                    WritePixel(x, y, floorTexX, floorTexY, red, green, blue, scale, depth);
+                    int ofs = tile.cutOff <= 0 ? 0 : MathUtils.FloorToInt((screenHeight / dist) * (1.0f - (tile.cutOff / (float)TileSize)));
+                    WritePixel(x, y - ofs, floorTexX, floorTexY, red, green, blue, scale, depth);
                 }
 
                 //ceiling
@@ -480,8 +502,8 @@ namespace LunarLabs.Raycaster
                     if (tile.ceilID > 0)
                     {
                         var ceilTexture = textures[tile.ceilID];
-                        ceilTexX = (int)(currentFloorX * tileSize) % ceilTexture.Width;
-                        ceilTexY = (int)(currentFloorY * tileSize) % ceilTexture.Height;
+                        ceilTexX = (int)(currentFloorX * TileSize) % ceilTexture.Width;
+                        ceilTexY = (int)(currentFloorY * TileSize) % ceilTexture.Height;
                         scale = CalculateFog(dist, mapX, mapY, ceilTexX, ceilTexY, false);
 
                         ceilTexture.GetPixel(ceilTexX, ceilTexY, out red, out green, out blue, out alpha);
@@ -541,6 +563,11 @@ namespace LunarLabs.Raycaster
         internal void WritePixel(int x, int y, int u, int v, byte red, byte green, byte blue, float scale, float dist)
         {
             y += Camera.drawOffset;
+
+            if (y < 0 || y >= Output.Height)
+            {
+                return;
+            }
 
             int zOfs = x + y * Output.Width;
             if (depthBuffer[zOfs] < dist)

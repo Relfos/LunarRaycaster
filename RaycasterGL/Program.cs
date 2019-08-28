@@ -50,9 +50,10 @@ namespace LunarLabs.Framework
             tileset = new Bitmap(Image.FromFile("Assets/tileset.png"));
             skybox = new Bitmap(Image.FromFile("Assets/skybox.png"));
 
-            AddSprite(new Sprite(20, 11.5f, 10));
             AddSprite(new Sprite(22, 11.5f, 11));
+            AddSprite(new Sprite(20, 11.5f, 10));
             AddSprite(new Sprite(18, 11.5f, 12));
+            AddSprite(new Sprite(17, 11.5f, 10));
             AddSprite(new Sprite(10, 11.5f, 11));
         }
 
@@ -61,6 +62,7 @@ namespace LunarLabs.Framework
             tile = new MapTile();
             tile.hasLight = true;
             tile.lightLevel = 1.0f;
+            tile.cutOff = 0;
 
             if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight)
             {
@@ -81,6 +83,19 @@ namespace LunarLabs.Framework
                 tile.wallID = wallData[x, y];
                 tile.floorID = 4;
                 tile.ceilID = (byte)(y ==11?7: 0);
+
+                if (x == 16 && y == 10)
+                {
+                    tile.cutOff = 24;
+                    tile.wallID = 3;
+                    tile.floorID = 7;
+                }
+                if (x == 15 && y == 10)
+                {
+                    tile.cutOff = 16;
+                    tile.wallID = 3;
+                    tile.floorID = 7;
+                }
                 return true;
             }
         }
@@ -104,13 +119,13 @@ namespace LunarLabs.Framework
 
         protected override Texture LoadTile(int index)
         {
-            int maxTile = (tileset.Width / tileSize);
+            int maxTile = (tileset.Width / TileSize);
             if (index == 0 || index > maxTile)
             {
                 return null;
             }
 
-            return Texture.Crop((index - 1) * tileSize, 0, tileSize, tileSize, (x, y) => tileset.GetPixel(x, y));
+            return Texture.Crop((index - 1) * TileSize, 0, TileSize, TileSize, (x, y) => tileset.GetPixel(x, y));
         }
     }
 

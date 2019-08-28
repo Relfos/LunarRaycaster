@@ -47,7 +47,7 @@
 
         internal void Update()
         {
-            int limit = Raycaster.tileSize;
+            int limit = Raycaster.TileSize;
             if (lookOffset < -limit) lookOffset = -limit;
             if (lookOffset > limit) lookOffset = limit;
 
