@@ -98,7 +98,7 @@
                             continue;
                         }*/
 
-                        raycaster.WritePixel(stripe, y, texX, texY, red, green, blue, scale);
+                        raycaster.WritePixel(stripe, y, texX, texY, red, green, blue, scale, transformY);
                     }
                 }
 

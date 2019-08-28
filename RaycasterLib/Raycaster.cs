@@ -31,6 +31,7 @@ namespace LunarLabs.Raycaster
 
         //1D Zbuffer
         internal float[] ZBuffer;
+        internal float[] depthBuffer;
 
         public struct SpriteQueue
         {
@@ -67,6 +68,7 @@ namespace LunarLabs.Raycaster
         {
             Output = new Texture(resolutionX, resolutionY);
             ZBuffer = new float[resolutionX];
+            depthBuffer = new float[resolutionX*resolutionY];
             spriteQueue = new SpriteQueue[999];
             textures = new Texture[256];
 
@@ -162,6 +164,11 @@ namespace LunarLabs.Raycaster
             #region ENVIROMENT CASTING
             for (int x = 0; x < screenWidth; x++)
             {
+                for (int y=0; y<screenHeight; y++)
+                {
+                    depthBuffer[x + y * screenWidth] = 9999;
+                }
+
                 //calculate ray position and direction
                 float cameraX = 2 * x / (float)(screenWidth) - 1; //x-coordinate in camera space
                 float rayPosX = Camera.posX;
@@ -326,6 +333,7 @@ namespace LunarLabs.Raycaster
 
                         byte red, green, blue, alpha;
                         float scale;
+                        float depth;
 
                         if (hit.wallTex != null)
                         {
@@ -337,25 +345,26 @@ namespace LunarLabs.Raycaster
                                 //make color darker for y-sides
                                 scale *= 0.5f;
                             }
+
+                            depth = dist;
                         }
                         else
                         {
                             SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
                             scale = 1.0f;
+
+                            depth = 9998;
                         }
 
                         if (alpha > 0)
                         {
-                            WritePixel(x, y, texX, texY, red, green, blue, scale);
+                            WritePixel(x, y, texX, texY, red, green, blue, scale, depth);
                         }
                     }
                     drawEnd = tempEnd;
 
-                    if (k == 0)
-                    {
-                        //SET THE ZBUFFER FOR THE SPRITE CASTING
-                        ZBuffer[x] = perpWallDist; //perpendicular distance is used
-                    }
+                    //SET THE ZBUFFER FOR THE SPRITE CASTING
+                    ZBuffer[x] = perpWallDist; //perpendicular distance is used
                 }
 
                 //FLOOR CASTING
@@ -429,6 +438,8 @@ namespace LunarLabs.Raycaster
                     float scale;
                     int floorTexX, floorTexY;
 
+                    float depth;
+
                     if (tile.floorID > 0)
                     {
                         var floorTexture = textures[tile.floorID];
@@ -437,16 +448,19 @@ namespace LunarLabs.Raycaster
 
                         scale = CalculateFog(dist, mapX, mapY, floorTexX, floorTexY, false);
                         floorTexture.GetPixel(floorTexX, floorTexY, out red, out green, out blue, out alpha);
+
+                        depth = dist;
                     }
                     else
                     {
                         scale = 1.0f;
                         floorTexX = 0;
                         floorTexY = 0;
+                        depth = 9998;
                         SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
                     }
 
-                    WritePixel(x, y, floorTexX, floorTexY, red, green, blue, scale);
+                    WritePixel(x, y, floorTexX, floorTexY, red, green, blue, scale, depth);
                 }
 
                 //ceiling
@@ -476,6 +490,7 @@ namespace LunarLabs.Raycaster
 
                     var dist = (currentDist - distPlayer);
                     byte red, green, blue, alpha;
+                    float depth;
 
                     if (tile.ceilID > 0)
                     {
@@ -485,6 +500,7 @@ namespace LunarLabs.Raycaster
                         scale = CalculateFog(dist, mapX, mapY, ceilTexX, ceilTexY, false);
 
                         ceilTexture.GetPixel(ceilTexX, ceilTexY, out red, out green, out blue, out alpha);
+                        depth = dist;
                     }
                     else
                     {
@@ -492,9 +508,10 @@ namespace LunarLabs.Raycaster
                         ceilTexY = 0;
                         scale = 1;
                         SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
+                        depth = 9998;
                     }
 
-                    WritePixel(x, y, ceilTexX, ceilTexY, red, green, blue, scale);
+                    WritePixel(x, y, ceilTexX, ceilTexY, red, green, blue, scale, depth);
                 }
             }
             #endregion
@@ -536,10 +553,17 @@ namespace LunarLabs.Raycaster
             #endregion
         }
 
-        internal void WritePixel(int x, int y, int u, int v, byte red, byte green, byte blue, float scale)
+        internal void WritePixel(int x, int y, int u, int v, byte red, byte green, byte blue, float scale, float dist)
         {
             y += Camera.drawOffset;
 
+            int zOfs = x + y * Output.Width;
+            if (depthBuffer[zOfs] < dist)
+            {
+                return;
+            }
+            depthBuffer[zOfs] = dist;
+            
             // todo : support scale + dither
 
             red = (byte)(red * scale);
