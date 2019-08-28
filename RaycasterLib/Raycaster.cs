@@ -323,11 +323,6 @@ namespace LunarLabs.Raycaster
 
                     for (int y = drawStart; y < drawEnd; y++)
                     {
-                        if (Output.GetChannel(x, y, 3) != 0)
-                        {
-                            continue;
-                        }
-
                         float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
                         int texY = MathUtils.FloorToInt(Math.Abs(((d * tileSize) / lineHeight)));
 
@@ -413,11 +408,6 @@ namespace LunarLabs.Raycaster
                 //draw the floor from drawEnd to the bottom of the screen
                 for (int y = drawEnd; y < Camera.maxY; y++)
                 {
-                    if (Output.GetChannel(x, y, 3) != 0)
-                    {
-                        continue;
-                    }
-
                     var temp = (2.0f * y) - screenHeight;
                     currentDist = screenHeight / temp; //you could make a small lookup table for this instead
 
@@ -466,11 +456,6 @@ namespace LunarLabs.Raycaster
                 //ceiling
                 for (int y = Camera.minY; y < drawStart; y++)
                 {
-                    if (Output.GetChannel(x, y, 3) != 0)
-                    {
-                        continue;
-                    }
-
                     var temp = (2.0f * (screenHeight- y)) - screenHeight;
                     currentDist = screenHeight / temp; //you could make a small lookup table for this instead
 
