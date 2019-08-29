@@ -101,7 +101,7 @@ namespace LunarLabs.Raycaster
 
         protected abstract Texture LoadTile(int index);
         protected abstract Texture LoadSkybox(int side);
-        protected abstract bool GetTileAt(int x, int y, out MapTile tile);
+        public abstract bool GetTileAt(int x, int y, out MapTile tile);
 
         internal float CalculateFog(float dist, int floorX, int floorY, int texX, int texY, bool emissive)
         {

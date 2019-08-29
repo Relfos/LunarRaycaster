@@ -59,7 +59,7 @@ namespace LunarLabs.Framework
             AddSprite(new Sprite(15, 11.5f, 13, 0, 2, 0));
         }
 
-        protected override bool GetTileAt(int x, int y, out MapTile tile)
+        public override bool GetTileAt(int x, int y, out MapTile tile)
         {
             tile = new MapTile();
             tile.lightID = 0;

@@ -13,19 +13,53 @@
         public float planeX { get; private set; } = 0.0f;
         public float planeY { get; private set; } = 0.66f; //the 2d raycaster version of camera plane
 
+        public float radius => Raycaster.TileSize * 0.25f;
+
         public Camera(Raycaster raycaster)
         {
             this.raycaster = raycaster;
         }
 
+        private bool CheckCollision(float nX, float nY)
+        {
+            MapTile tile;
+
+            if (raycaster.GetTileAt(Mathf.FloorToInt(nX), Mathf.FloorToInt(nY), out tile))
+            {
+                if (tile.wallID != 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
         public void Move(float moveSpeed)
         {
+            var nX = posX + dirX * moveSpeed * radius;
+            var nY = posY + dirY * moveSpeed * radius;
+
+            if (CheckCollision(nX, nY))
+            {
+                return;
+            }
+
             posX += dirX * moveSpeed;
             posY += dirY * moveSpeed;
         }
 
         public void Strafe(float moveSpeed)
         {
+            var nX = posX + dirY * moveSpeed * radius;
+            var nY = posY - dirX * moveSpeed * radius;
+
+            if (CheckCollision(nX, nY))
+            {
+                return;
+            }
+
             posX += dirY * moveSpeed;
             posY -= dirX * moveSpeed;
         }
