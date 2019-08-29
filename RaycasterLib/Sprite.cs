@@ -7,13 +7,17 @@
         public int textureID;
         public int vOffset; // negative numbers make the sprites float up, positive make them go under floor
         public bool isEmissive = false;
+        public int angleFrames = 1;
+        private float rotation = 0;
 
-        public Sprite(float x, float y, int textureID, int offset = 0)
+        public Sprite(float x, float y, int textureID, int vOffset = 0, int angleFrames = 1, float angle = 0)
         {
             this.posX = x;
             this.posY = y;
             this.textureID = textureID;
-            this.vOffset = offset;
+            this.vOffset = vOffset;
+            this.angleFrames = angleFrames;
+            this.rotation = angle;
         }
 
         public void Render(Raycaster raycaster, float invDet)
@@ -63,11 +67,25 @@
             if (drawStartY < cam.minY) drawStartY = cam.minY;
             if (drawEndY > cam.maxY) drawEndY = cam.maxY;
 
+            int spriteID = this.textureID;
+
+            if (angleFrames > 1)
+            {
+                float theta = MathUtils.Atan2(spriteX, spriteY) * MathUtils.Rad2Deg;
+                theta += this.rotation;
+
+                while (theta < 0.0f) theta += 360;
+                while (theta >= 360.0f) theta -= 360;
+
+                float delta = 360.0f / (float)angleFrames;
+                spriteID += MathUtils.FloorToInt(theta / delta);
+            }
+
+            var texture = raycaster.textures[spriteID];
+
             //loop through every vertical stripe of the sprite on screen
             for (int stripe = drawStartX; stripe < drawEndX; stripe++)
             {
-                var texture = raycaster.textures[this.textureID];
-
                 int texX = MathUtils.FloorToInt((stripe - (-spriteWidth / 2 + spriteScreenX)) * texture.Width / spriteWidth);
                 //the conditions in the if are:
                 //1) it's in front of camera plane so you don't see things behind you
@@ -85,7 +103,7 @@
 
                         byte red, green, blue, alpha;
 
-                        raycaster.textures[this.textureID].GetPixel(texX, texY, out red, out green, out blue, out alpha); //get current color from the texture
+                        texture.GetPixel(texX, texY, out red, out green, out blue, out alpha); //get current color from the texture
 
                         if (alpha == 0)
                         {

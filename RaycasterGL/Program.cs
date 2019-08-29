@@ -45,7 +45,7 @@ namespace LunarLabs.Framework
               {4,4,4,4,4,4,4,4,4,4,1,1,1,2,2,2,2,2,2,3,3,3,3,3}
         };
 
-        public CustomRaycaster():base(320, 240)
+        public CustomRaycaster():base(160, 144)
         {
             tileset = new Bitmap(Image.FromFile("Assets/tileset.png"));
             skybox = new Bitmap(Image.FromFile("Assets/skybox.png"));
@@ -56,7 +56,7 @@ namespace LunarLabs.Framework
             AddSprite(new Sprite(17, 11.5f, 10));
             AddSprite(new Sprite(10, 11.5f, 11));
 
-            AddSprite(new Sprite(15, 11.5f, 14));
+            AddSprite(new Sprite(15, 11.5f, 13, 0, 4, 0));
         }
 
         protected override bool GetTileAt(int x, int y, out MapTile tile)

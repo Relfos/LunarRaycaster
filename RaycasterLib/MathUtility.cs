@@ -12,6 +12,33 @@ namespace LunarLabs.Raycaster
 {
 
 #if !UNITY
+    public struct Vector2
+    {
+        public float X;
+        public float Y;
+
+        public Vector2(float x, float y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public float Length => MathUtils.Sqrt(X * X + Y * Y);
+
+        public void Normalize()
+        {
+            var len = this.Length;
+            if (len == 0)
+            {
+                return;
+            }
+
+            len = 1.0f / len;
+            X *= len;
+            Y *= len;
+        }
+    }
+
     public struct Vector3
     {
         public float X;
