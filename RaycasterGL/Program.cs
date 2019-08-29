@@ -55,6 +55,8 @@ namespace LunarLabs.Framework
             AddSprite(new Sprite(18, 11.5f, 12));
             AddSprite(new Sprite(17, 11.5f, 10));
             AddSprite(new Sprite(10, 11.5f, 11));
+
+            AddSprite(new Sprite(15, 11.5f, 14));
         }
 
         protected override bool GetTileAt(int x, int y, out MapTile tile)
