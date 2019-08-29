@@ -64,8 +64,9 @@ namespace LunarLabs.Framework
             tile = new MapTile();
             tile.lightID = 0;
             tile.lightLevel = 1.0f;
-            tile.cutOff = 0;
+            tile.wallHeight = 0;
             tile.lightLevel = 1.0f;
+            tile.ceilHeight = 0;
 
             if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight)
             {
@@ -86,21 +87,27 @@ namespace LunarLabs.Framework
                 tile.wallID = wallData[x, y];
                 tile.floorID = 4;
                 tile.ceilID = (byte)(y >=9 && y<=13?7: 0);
+                tile.ceilHeight = (byte)( y == 9? 24:0);
 
                 if (x == 18 && y == 11)
                 {
                     tile.lightID = 15;
                 }
 
+                if (x == 17 && y == 9)
+                {
+                    tile.ceilHeight = 20;
+                }
+
                 if (x == 16 && y == 10)
                 {
-                    tile.cutOff = 24;
+                    tile.wallHeight = 24;
                     tile.wallID = 3;
                     tile.floorID = 7;
                 }
                 if (x == 15 && y == 10)
                 {
-                    tile.cutOff = 16;
+                    tile.wallHeight = 16;
                     tile.wallID = 3;
                     tile.floorID = 7;
                 }

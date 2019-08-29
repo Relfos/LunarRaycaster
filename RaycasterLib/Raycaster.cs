@@ -3,19 +3,14 @@ using System.Collections.Generic;
 
 namespace LunarLabs.Raycaster
 {
-    public enum HitAxis
-    {
-        X,
-        Y
-    }
-
     public struct MapTile
     {
         public int height;
         public byte wallID;
         public byte ceilID;
+        public byte ceilHeight;
+        public int wallHeight;
         public byte floorID;
-        public int cutOff;
         public float lightLevel;
         public byte lightID;
     }
@@ -48,21 +43,23 @@ namespace LunarLabs.Raycaster
         internal Texture[] textures;
         private Texture[] skybox = new Texture[6];
 
+        public enum HitAxis
+        {
+            X,
+            Y
+        }
+
         public struct MapHit
         {
             public int mapX;
             public int mapY;
-            public Texture wallTex;
-            public int cutOff;
             public HitAxis side;
 
-            public MapHit(int mapX, int mapY, HitAxis side, Texture wall, int cutOff)
+            public MapHit(int mapX, int mapY, HitAxis side)
             {
                 this.mapX = mapX;
                 this.mapY = mapY;
                 this.side = side;
-                this.cutOff = cutOff;
-                this.wallTex = wall;
             }
         }
 
@@ -257,25 +254,28 @@ namespace LunarLabs.Raycaster
                     //Check if ray has hit a wall
                     MapTile tile;
                     var sucess = GetTileAt(currentMapX, currentMapY, out tile);
-                    var wallTex = textures[tile.wallID];
 
                     if (!sucess)
                     {
-                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex, 0);
+                        var hit = new MapHit(currentMapX, currentMapY, currentSide);
                         hits[hitCount] = hit;
                         hitCount++;
                         break;
                     }
 
-                    if (tile.wallID > 0)
+                    if (tile.wallID > 0 || tile.ceilHeight > 0)
                     {
-                        var hit = new MapHit(currentMapX, currentMapY, currentSide, wallTex, tile.cutOff);
+                        var hit = new MapHit(currentMapX, currentMapY, currentSide);
                         hits[hitCount] = hit;
                         hitCount++;
 
-                        if (!wallTex.hasAlpha && tile.cutOff == 0)
+                        if (tile.wallID > 0)
                         {
-                            break;
+                            var wallTex = textures[tile.wallID];
+                            if (!wallTex.hasAlpha && tile.wallHeight == 0)
+                            {
+                                break;
+                            }
                         }
                     }
 
@@ -341,17 +341,20 @@ namespace LunarLabs.Raycaster
                     if (hit.side == HitAxis.X && rayDirX > 0) texX = TileSize - texX - 1;
                     if (hit.side == HitAxis.Y && rayDirY < 0) texX = TileSize - texX - 1;
 
+                    MapTile tile;
+                    GetTileAt(hit.mapX, hit.mapY, out tile);
+
                     for (int y = drawStart; y < drawEnd; y++)
                     {
                         float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
                         int texY = Mathf.FloorToInt(Math.Abs(((d * TileSize) / lineHeight)));
 
-                        if (hit.cutOff > 0 && texY < hit.cutOff)
+                        if (tile.wallHeight > 0 && texY < tile.wallHeight)
                         {
                             continue;
                         }
 
-                        if (hit.cutOff < 0 && texY > -hit.cutOff)
+                        if (tile.wallHeight < 0 && texY > -tile.wallHeight)
                         {
                             continue;
                         }
@@ -360,10 +363,12 @@ namespace LunarLabs.Raycaster
                         float scale;
                         float depth;
 
-                        if (hit.wallTex != null)
+                        scale = CalculateFog(dist, hit.mapX, hit.mapY, texX, texY, false);
+
+                        if (tile.wallID > 0)
                         {
-                            hit.wallTex.GetPixel(texX, texY, out red, out green, out blue, out alpha);
-                            scale = CalculateFog(dist, hit.mapX, hit.mapY, texX, texY, false);
+                            var tex = textures[tile.wallID];
+                            tex.GetPixel(texX, texY, out red, out green, out blue, out alpha);
 
                             if (hit.side == HitAxis.Y)
                             {
@@ -375,8 +380,11 @@ namespace LunarLabs.Raycaster
                         }
                         else
                         {
-                            SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
-                            scale = 1.0f;
+                            red = 0;
+                            green = 0;
+                            blue = 0;
+                            alpha = 0;
+                            //SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
 
                             depth = 9998;
                         }
@@ -386,6 +394,17 @@ namespace LunarLabs.Raycaster
                         if (visible)
                         {
                             WritePixel(x, y, texX, texY, red, green, blue, scale, depth);
+                        }
+
+                        if (tile.ceilHeight > 0 && texY > tile.ceilHeight)
+                        {
+                            var tex = textures[tile.ceilID];
+                            tex.GetPixel(texX, texY, out red, out green, out blue, out alpha);
+                            if (alpha > 0)
+                            {
+                                depth = dist;
+                                WritePixel(x, y - lineHeight + 1, texX, texY, red, green, blue, scale, depth);
+                            }
                         }
                     }
                     drawEnd = tempEnd;
@@ -454,7 +473,7 @@ namespace LunarLabs.Raycaster
                     MapTile tile;
                     GetTileAt(mapX, mapY, out tile);
 
-                    if (tile.wallID != 0 && !textures[tile.wallID].hasAlpha && tile.cutOff< HalfTileSize)
+                    if (tile.wallID != 0 && !textures[tile.wallID].hasAlpha && tile.wallHeight< HalfTileSize)
                     {
                         continue;
                     }
@@ -487,7 +506,7 @@ namespace LunarLabs.Raycaster
                         SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
                     }
 
-                    int ofs = tile.cutOff <= 0 ? 0 : Mathf.FloorToInt((screenHeight / dist) * (1.0f - (tile.cutOff / (float)TileSize)));
+                    int ofs = tile.wallHeight <= 0 ? 0 : Mathf.FloorToInt((screenHeight / dist) * (1.0f - (tile.wallHeight / (float)TileSize)));
                     WritePixel(x, y - ofs, floorTexX, floorTexY, red, green, blue, scale, depth);
                 }
 
