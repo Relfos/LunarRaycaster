@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Diagnostics;
@@ -63,6 +63,7 @@ namespace LunarLabs.Framework
             tile.hasLight = true;
             tile.lightLevel = 1.0f;
             tile.cutOff = 0;
+            tile.lightLevel = 1.0f;
 
             if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight)
             {
@@ -82,7 +83,7 @@ namespace LunarLabs.Framework
             {
                 tile.wallID = wallData[x, y];
                 tile.floorID = 4;
-                tile.ceilID = (byte)(y ==11?7: 0);
+                tile.ceilID = (byte)(y >=9 && y<=13?7: 0);
 
                 if (x == 16 && y == 10)
                 {
@@ -96,6 +97,12 @@ namespace LunarLabs.Framework
                     tile.wallID = 3;
                     tile.floorID = 7;
                 }
+
+                if (tile.ceilID != 0)
+                {
+                    tile.lightLevel = 0.5f;
+                }
+
                 return true;
             }
         }

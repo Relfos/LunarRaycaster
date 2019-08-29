@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace LunarLabs.Raycaster
@@ -107,6 +107,7 @@ namespace LunarLabs.Raycaster
         {
             float limit = 3;
             float scale;
+
             if (dist < limit)
             {
                 scale = 1;
@@ -116,6 +117,11 @@ namespace LunarLabs.Raycaster
                 dist -= limit;
                 scale = 1 - MathUtils.Min(1, MathUtils.Abs(dist / 8.0f));
             }
+
+            MapTile tile;
+            GetTileAt(floorX, floorY, out tile);
+
+            scale *= tile.lightLevel;
 
             return scale;
         }
@@ -288,7 +294,7 @@ namespace LunarLabs.Raycaster
                     var hit = hits[k];
 
                     //Calculate distance of perpendicular ray (oblique distance will give fisheye effect!)
-                    if (hit.side == 0)
+                    if (hit.side == HitAxis.X)
                         perpWallDist = (hit.mapX - rayPosX + (1 - stepX) / 2) / rayDirX;
                     else
                         perpWallDist = (hit.mapY - rayPosY + (1 - stepY) / 2) / rayDirY;
