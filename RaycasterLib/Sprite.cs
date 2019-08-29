@@ -50,19 +50,19 @@
             //calculate width of the sprite
             float spriteWidth  = screenHeight / transformY;
 
-            int mapX = MathUtils.FloorToInt(posX);
-            int mapY = MathUtils.FloorToInt(posY);
+            int mapX = Mathf.FloorToInt(posX);
+            int mapY = Mathf.FloorToInt(posY);
 
-            int drawStartX = MathUtils.FloorToInt(-spriteWidth / 2 + spriteScreenX);
-            int drawEndX = MathUtils.FloorToInt(spriteWidth / 2 + spriteScreenX);
+            int drawStartX = Mathf.FloorToInt(-spriteWidth / 2 + spriteScreenX);
+            int drawEndX = Mathf.FloorToInt(spriteWidth / 2 + spriteScreenX);
 
             if (drawStartX < 0) drawStartX = 0;
             if (drawEndX >= screenWidth) drawEndX = screenWidth - 1;
 
             //calculate lowest and highest pixel to fill in current stripe
             float spriteScreenY = screenHeight / 2 + vMoveScreen;
-            int drawStartY = MathUtils.FloorToInt(-spriteHeight / 2 + spriteScreenY);
-            int drawEndY = MathUtils.FloorToInt(spriteHeight / 2 + spriteScreenY);
+            int drawStartY = Mathf.FloorToInt(-spriteHeight / 2 + spriteScreenY);
+            int drawEndY = Mathf.FloorToInt(spriteHeight / 2 + spriteScreenY);
 
             if (drawStartY < cam.minY) drawStartY = cam.minY;
             if (drawEndY > cam.maxY) drawEndY = cam.maxY;
@@ -71,14 +71,14 @@
 
             if (angleFrames > 1)
             {
-                float theta = MathUtils.Atan2(spriteX, spriteY) * MathUtils.Rad2Deg;
+                float theta = Mathf.Atan2(spriteX, spriteY) * Mathf.Rad2Deg;
                 theta += this.rotation;
 
                 while (theta < 0.0f) theta += 360;
                 while (theta >= 360.0f) theta -= 360;
 
                 float delta = 360.0f / (float)angleFrames;
-                spriteID += MathUtils.FloorToInt(theta / delta);
+                spriteID += Mathf.FloorToInt(theta / delta);
             }
 
             var texture = raycaster.textures[spriteID];
@@ -86,7 +86,7 @@
             //loop through every vertical stripe of the sprite on screen
             for (int stripe = drawStartX; stripe < drawEndX; stripe++)
             {
-                int texX = MathUtils.FloorToInt((stripe - (-spriteWidth / 2 + spriteScreenX)) * texture.Width / spriteWidth);
+                int texX = Mathf.FloorToInt((stripe - (-spriteWidth / 2 + spriteScreenX)) * texture.Width / spriteWidth);
                 //the conditions in the if are:
                 //1) it's in front of camera plane so you don't see things behind you
                 //2) it's on the screen (left)
@@ -99,7 +99,7 @@
                     for (int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
                     {
                         float d = (y - vMoveScreen) - screenHeight * 0.5f + spriteHeight * 0.5f;
-                        int texY =MathUtils.FloorToInt( ((d * texture.Height) / spriteHeight));
+                        int texY =Mathf.FloorToInt( ((d * texture.Height) / spriteHeight));
 
                         byte red, green, blue, alpha;
 

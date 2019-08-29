@@ -51,7 +51,7 @@
             if (lookOffset < -limit) lookOffset = -limit;
             if (lookOffset > limit) lookOffset = limit;
 
-            drawOffset = MathUtils.FloorToInt(lookOffset);
+            drawOffset = Mathf.FloorToInt(lookOffset);
             minY = -drawOffset;
             maxY = (raycaster.Output.Height - 1) - drawOffset;
         }
@@ -59,11 +59,11 @@
         public void Rotate(float rotSpeed)
         {
             float oldDirX = dirX;
-            dirX = dirX * MathUtils.Cos(rotSpeed) - dirY * MathUtils.Sin(rotSpeed);
-            dirY = oldDirX * MathUtils.Sin(rotSpeed) + dirY * MathUtils.Cos(rotSpeed);
+            dirX = dirX * Mathf.Cos(rotSpeed) - dirY * Mathf.Sin(rotSpeed);
+            dirY = oldDirX * Mathf.Sin(rotSpeed) + dirY * Mathf.Cos(rotSpeed);
             float oldPlaneX = planeX;
-            planeX = planeX * MathUtils.Cos(rotSpeed) - planeY * MathUtils.Sin(rotSpeed);
-            planeY = oldPlaneX * MathUtils.Sin(rotSpeed) + planeY * MathUtils.Cos(rotSpeed);
+            planeX = planeX * Mathf.Cos(rotSpeed) - planeY * Mathf.Sin(rotSpeed);
+            planeY = oldPlaneX * Mathf.Sin(rotSpeed) + planeY * Mathf.Cos(rotSpeed);
         }
     }
 }

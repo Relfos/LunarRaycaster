@@ -23,7 +23,7 @@ namespace LunarLabs.Raycaster
             Y = y;
         }
 
-        public float Length => MathUtils.Sqrt(X * X + Y * Y);
+        public float Length => Mathf.Sqrt(X * X + Y * Y);
 
         public void Normalize()
         {
@@ -52,7 +52,7 @@ namespace LunarLabs.Raycaster
             Z = z;
         }
 
-        public float Length => MathUtils.Sqrt(X * X + Y * Y + Z * Z);
+        public float Length => Mathf.Sqrt(X * X + Y * Y + Z * Z);
 
         public void Normalize()
         {
@@ -70,7 +70,7 @@ namespace LunarLabs.Raycaster
     }
 #endif
 
-    public static class MathUtils
+    public static class Mathf
     {
 #if UNITY
         public const float PI = Mathf.PI;
@@ -334,7 +334,7 @@ namespace LunarLabs.Raycaster
 
         public static float DeltaAngle(float current, float target)
         {
-            float num = MathUtils.Repeat(target - current, 360f);
+            float num = Mathf.Repeat(target - current, 360f);
             if (num > 180f)
             {
                 num -= 360f;

@@ -51,18 +51,18 @@ namespace LunarLabs.Framework
             skybox = new Bitmap(Image.FromFile("Assets/skybox.png"));
 
             AddSprite(new Sprite(22, 11.5f, 11));
-            AddSprite(new Sprite(20, 11.5f, 10));
-            AddSprite(new Sprite(18, 11.5f, 12));
+            AddSprite(new Sprite(20, 11.5f, 10, 4));
+            AddSprite(new Sprite(18.5f, 11.5f, 12));
             AddSprite(new Sprite(17, 11.5f, 10));
             AddSprite(new Sprite(10, 11.5f, 11));
 
-            AddSprite(new Sprite(15, 11.5f, 13, 0, 4, 0));
+            AddSprite(new Sprite(15, 11.5f, 13, 0, 2, 0));
         }
 
         protected override bool GetTileAt(int x, int y, out MapTile tile)
         {
             tile = new MapTile();
-            tile.hasLight = true;
+            tile.lightID = 0;
             tile.lightLevel = 1.0f;
             tile.cutOff = 0;
             tile.lightLevel = 1.0f;
@@ -86,6 +86,11 @@ namespace LunarLabs.Framework
                 tile.wallID = wallData[x, y];
                 tile.floorID = 4;
                 tile.ceilID = (byte)(y >=9 && y<=13?7: 0);
+
+                if (x == 18 && y == 11)
+                {
+                    tile.lightID = 15;
+                }
 
                 if (x == 16 && y == 10)
                 {
@@ -298,8 +303,8 @@ namespace LunarLabs.Framework
                         engine.Camera.Look(-speed);
                     }
 
-                    mouseDeltaX = MathUtils.Lerp(mouseDeltaX, newMouseDeltaX, 0.5f);
-                    mouseDeltaY = MathUtils.Lerp(mouseDeltaY, newMouseDeltaY, 0.5f);
+                    mouseDeltaX = Mathf.Lerp(mouseDeltaX, newMouseDeltaX, 0.5f);
+                    mouseDeltaY = Mathf.Lerp(mouseDeltaY, newMouseDeltaY, 0.5f);
 
                     engine.Camera.Rotate(mouseDeltaX * 32);
                     engine.Camera.Look(mouseDeltaY * 32);

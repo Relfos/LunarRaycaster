@@ -17,7 +17,7 @@ namespace LunarLabs.Raycaster
         public byte floorID;
         public int cutOff;
         public float lightLevel;
-        public bool hasLight;
+        public byte lightID;
     }
 
     public abstract class Raycaster
@@ -103,7 +103,7 @@ namespace LunarLabs.Raycaster
         protected abstract Texture LoadSkybox(int side);
         protected abstract bool GetTileAt(int x, int y, out MapTile tile);
 
-        internal float CalculateFog(float dist, int floorX, int floorY, float u, float v, bool emissive)
+        internal float CalculateFog(float dist, int floorX, int floorY, int texX, int texY, bool emissive)
         {
             float limit = 3;
             float scale;
@@ -115,13 +115,23 @@ namespace LunarLabs.Raycaster
             else
             {
                 dist -= limit;
-                scale = 1 - MathUtils.Min(1, MathUtils.Abs(dist / 8.0f));
+                scale = 1f - Mathf.Min(1, Mathf.Abs(dist / 8.0f));
             }
 
             MapTile tile;
             GetTileAt(floorX, floorY, out tile);
 
-            scale *= tile.lightLevel;
+            if (tile.lightID > 0)
+            {
+                var lightmap = textures[tile.lightID];
+                var lightVal = lightmap.GetChannel(texX, texY, 0);
+                var temp = Mathf.Lerp(tile.lightLevel, 1.0f, (lightVal / 255.0f)); // TODO optimize me
+                scale *= temp;
+            }
+            else
+            {
+                scale *= tile.lightLevel;
+            }
 
             return scale;
         }
@@ -191,8 +201,8 @@ namespace LunarLabs.Raycaster
                 float sideDistY;
 
                 //length of ray from one x or y-side to next x or y-side
-                float deltaDistX = MathUtils.Sqrt(1 + (rayDirY * rayDirY) / (rayDirX * rayDirX));
-                float deltaDistY = MathUtils.Sqrt(1 + (rayDirX * rayDirX) / (rayDirY * rayDirY));
+                float deltaDistX = Mathf.Sqrt(1 + (rayDirY * rayDirY) / (rayDirX * rayDirX));
+                float deltaDistY = Mathf.Sqrt(1 + (rayDirX * rayDirX) / (rayDirY * rayDirY));
 
                 //what direction to step in x or y-direction (either +1 or -1)
                 int stepX;
@@ -300,7 +310,7 @@ namespace LunarLabs.Raycaster
                         perpWallDist = (hit.mapY - rayPosY + (1 - stepY) / 2) / rayDirY;
 
                     //Calculate height of line to draw on screen
-                    int lineHeight = MathUtils.FloorToInt(screenHeight / perpWallDist);
+                    int lineHeight = Mathf.FloorToInt(screenHeight / perpWallDist);
 
                     //calculate lowest and highest pixel to fill in current stripe
                     drawStart = (-lineHeight + screenHeight) / 2;
@@ -321,12 +331,12 @@ namespace LunarLabs.Raycaster
 
                     wallX = (hit.side == HitAxis.Y) ? wallY : wallX;
 
-                    wallX -= MathUtils.Floor(wallX);
+                    wallX -= Mathf.Floor(wallX);
 
                     //x coordinate on the texture
                     int texX;
 
-                    texX = MathUtils.FloorToInt(wallX * TileSize);
+                    texX = Mathf.FloorToInt(wallX * TileSize);
 
                     if (hit.side == HitAxis.X && rayDirX > 0) texX = TileSize - texX - 1;
                     if (hit.side == HitAxis.Y && rayDirY < 0) texX = TileSize - texX - 1;
@@ -334,7 +344,7 @@ namespace LunarLabs.Raycaster
                     for (int y = drawStart; y < drawEnd; y++)
                     {
                         float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
-                        int texY = MathUtils.FloorToInt(Math.Abs(((d * TileSize) / lineHeight)));
+                        int texY = Mathf.FloorToInt(Math.Abs(((d * TileSize) / lineHeight)));
 
                         if (hit.cutOff > 0 && texY < hit.cutOff)
                         {
@@ -435,11 +445,11 @@ namespace LunarLabs.Raycaster
 
                     float weight = (currentDist - distPlayer) / (distWall - distPlayer);
 
-                    float currentFloorX = MathUtils.Lerp(Camera.posX, floorXWall, weight);
-                    float currentFloorY = MathUtils.Lerp(Camera.posY, floorYWall, weight);
+                    float currentFloorX = Mathf.Lerp(Camera.posX, floorXWall, weight);
+                    float currentFloorY = Mathf.Lerp(Camera.posY, floorYWall, weight);
 
-                    var mapX = MathUtils.FloorToInt(currentFloorX);
-                    var mapY = MathUtils.FloorToInt(currentFloorY);
+                    var mapX = Mathf.FloorToInt(currentFloorX);
+                    var mapY = Mathf.FloorToInt(currentFloorY);
 
                     MapTile tile;
                     GetTileAt(mapX, mapY, out tile);
@@ -477,7 +487,7 @@ namespace LunarLabs.Raycaster
                         SampleSky(rayDirX, rayDirY, y, out red, out green, out blue, out alpha);
                     }
 
-                    int ofs = tile.cutOff <= 0 ? 0 : MathUtils.FloorToInt((screenHeight / dist) * (1.0f - (tile.cutOff / (float)TileSize)));
+                    int ofs = tile.cutOff <= 0 ? 0 : Mathf.FloorToInt((screenHeight / dist) * (1.0f - (tile.cutOff / (float)TileSize)));
                     WritePixel(x, y - ofs, floorTexX, floorTexY, red, green, blue, scale, depth);
                 }
 
@@ -489,11 +499,11 @@ namespace LunarLabs.Raycaster
 
                     float weight = (currentDist - distPlayer) / (distWall - distPlayer);
 
-                    float currentFloorX = MathUtils.Lerp(Camera.posX, floorXWall, weight);
-                    float currentFloorY = MathUtils.Lerp(Camera.posY, floorYWall, weight);
+                    float currentFloorX = Mathf.Lerp(Camera.posX, floorXWall, weight);
+                    float currentFloorY = Mathf.Lerp(Camera.posY, floorYWall, weight);
 
-                    var mapX = MathUtils.FloorToInt(currentFloorX);
-                    var mapY = MathUtils.FloorToInt(currentFloorY);
+                    var mapX = Mathf.FloorToInt(currentFloorX);
+                    var mapY = Mathf.FloorToInt(currentFloorY);
 
                     MapTile tile;
                     GetTileAt(mapX, mapY, out tile);
@@ -593,9 +603,9 @@ namespace LunarLabs.Raycaster
 
         private void ConvertCoordsToCubemap(float x, float y, float z, out int index, out float u, out float v)
         {
-            float absX = MathUtils.Abs(x);
-            float absY = MathUtils.Abs(y);
-            float absZ = MathUtils.Abs(z);
+            float absX = Mathf.Abs(x);
+            float absY = Mathf.Abs(y);
+            float absZ = Mathf.Abs(z);
 
             bool isXPositive = x > 0;
             bool isYPositive = y > 0;
