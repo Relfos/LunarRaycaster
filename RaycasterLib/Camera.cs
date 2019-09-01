@@ -81,17 +81,20 @@
 
         internal void Update()
         {
-            int limit = Raycaster.TileSize;
+            int limit = Mathf.FloorToInt(raycaster.Output.Height * 0.3333f);
             if (lookOffset < -limit) lookOffset = -limit;
             if (lookOffset > limit) lookOffset = limit;
 
             drawOffset = Mathf.FloorToInt(lookOffset);
 
-            minY = -drawOffset;
-            maxY = (raycaster.Output.Height - 1) - drawOffset;
+            minY = 0;
+            maxY = (raycaster.Output.Height - 1);
 
-            minY = -Raycaster.TileSize - drawOffset;
-            maxY = (raycaster.Output.Height + Raycaster.TileSize - drawOffset) - 1;
+            minY -= drawOffset;
+            maxY -= drawOffset;
+
+            minY -= limit*2;
+            maxY += limit*2;
         }
 
         public void Rotate(float rotSpeed)
