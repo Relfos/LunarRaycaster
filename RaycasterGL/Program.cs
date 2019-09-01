@@ -45,6 +45,8 @@ namespace LunarLabs.Framework
               {4,4,4,4,4,4,4,4,4,4,1,1,1,2,2,2,2,2,2,3,3,3,3,3}
         };
 
+        private MapTile[,] mapData = new MapTile[mapWidth, mapHeight];
+
         public CustomRaycaster():base(160, 144)
         {
             tileset = new Bitmap(Image.FromFile("Assets/tileset.png"));
@@ -57,19 +59,79 @@ namespace LunarLabs.Framework
             AddSprite(new Sprite(10, 11.5f, 11));
 
             AddSprite(new Sprite(15, 11.5f, 13, 0, 2, 0));
+
+            for (int y = 0; y < mapHeight; y++)
+            {
+                for (int x = 0; x < mapWidth; x++)
+                {
+                    var tile = new MapTile();
+                    tile.lightID = 0;
+                    tile.lightLevel = 1.0f;
+                    tile.wallHeight = 0;
+                    tile.lightLevel = 1.0f;
+                    tile.ceilHeight = 0;
+
+                    tile.wallID = wallData[x, y];
+                    tile.floorID = 4;
+                    tile.ceilID = (byte)(y >= 9 && y <= 13 ? 7 : 0);
+                    tile.ceilHeight = (byte)(y == 9 ? 24 : 0);
+
+                    if (x == 18 && y == 11)
+                    {
+                        tile.lightID = 15;
+                    }
+
+                    if (x == 17 && y == 9)
+                    {
+                        tile.ceilHeight = 20;
+                    }
+
+                    if (x == 16 && y == 10)
+                    {
+                        tile.wallHeight = 24;
+                        tile.wallID = 3;
+                        tile.floorID = 7;
+                    }
+                    if (x == 15 && y == 10)
+                    {
+                        tile.wallHeight = 16;
+                        tile.wallID = 3;
+                        tile.floorID = 7;
+                    }
+
+                    if (tile.ceilID != 0)
+                    {
+                        tile.lightLevel = 0.5f;
+                    }
+
+                    mapData[x, y] = tile;
+                }
+            }
+
+            for (int y = 1; y < mapHeight; y++)
+            {
+                for (int x = 1; x < mapWidth; x++)
+                {
+                    if (mapData[x, y].wallID == 0 && (mapData[x, y - 1].wallID != 0 || mapData[x, y - 1].ceilID != 0))
+                    {
+                        mapData[x, y].lightLevel = Mathf.Min(mapData[x, y].lightLevel, 0.5f);
+                    }
+                }
+            }
+
         }
 
         public override bool GetTileAt(int x, int y, out MapTile tile)
         {
-            tile = new MapTile();
-            tile.lightID = 0;
-            tile.lightLevel = 1.0f;
-            tile.wallHeight = 0;
-            tile.lightLevel = 1.0f;
-            tile.ceilHeight = 0;
 
             if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight)
             {
+                tile = new MapTile();
+                tile.lightID = 0;
+                tile.lightLevel = 1.0f;
+                tile.wallHeight = 0;
+                tile.lightLevel = 1.0f;
+                tile.ceilHeight = 0;
                 tile.wallID = 0;
                 tile.floorID = 0;
                 tile.ceilID = 0;
@@ -84,39 +146,7 @@ namespace LunarLabs.Framework
             }
             else
             {
-                tile.wallID = wallData[x, y];
-                tile.floorID = 4;
-                tile.ceilID = (byte)(y >=9 && y<=13?7: 0);
-                tile.ceilHeight = (byte)( y == 9? 24:0);
-
-                if (x == 18 && y == 11)
-                {
-                    tile.lightID = 15;
-                }
-
-                if (x == 17 && y == 9)
-                {
-                    tile.ceilHeight = 20;
-                }
-
-                if (x == 16 && y == 10)
-                {
-                    tile.wallHeight = 24;
-                    tile.wallID = 3;
-                    tile.floorID = 7;
-                }
-                if (x == 15 && y == 10)
-                {
-                    tile.wallHeight = 16;
-                    tile.wallID = 3;
-                    tile.floorID = 7;
-                }
-
-                if (tile.ceilID != 0)
-                {
-                    tile.lightLevel = 0.5f;
-                }
-
+                tile = mapData[x, y];
                 return true;
             }
         }

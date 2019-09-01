@@ -344,7 +344,7 @@ namespace LunarLabs.Raycaster
                     MapTile tile;
                     GetTileAt(hit.mapX, hit.mapY, out tile);
 
-                    for (int y = drawStart; y < drawEnd; y++)
+                    for (int y = drawStart; y <= drawEnd; y++)
                     {
                         float d = y - screenHeight * 0.5f + lineHeight * 0.5f;
                         int texY = Mathf.FloorToInt(Math.Abs(((d * TileSize) / lineHeight)));
