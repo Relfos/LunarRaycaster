@@ -86,8 +86,12 @@
             if (lookOffset > limit) lookOffset = limit;
 
             drawOffset = Mathf.FloorToInt(lookOffset);
+
             minY = -drawOffset;
             maxY = (raycaster.Output.Height - 1) - drawOffset;
+
+            minY = -Raycaster.TileSize - drawOffset;
+            maxY = (raycaster.Output.Height + Raycaster.TileSize - drawOffset) - 1;
         }
 
         public void Rotate(float rotSpeed)
